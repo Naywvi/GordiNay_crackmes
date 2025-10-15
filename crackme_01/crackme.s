@@ -1,16 +1,15 @@
-;  
-; CRACKME - "DO YOU TRUST YOUR SYSTEM?"
-
-; Objectif : Trouver le bon serial pour le username
-; Compilation :
+;   
+; ENCRYPT_THIS v1.0 - VERSION OBFUSQUÉE
+;   
+; Find the flag
+; Techniques: Junk code, Opaque predicates, Dead code
 ;   nasm -f elf64 crackme.s -o crackme.o
 ;   ld crackme.o -o trust_yourself
-;  
+; 
 
 BITS 64
 
 section .data
-    ; Bannière: ENCRYPT_THIS v1.0 (XOR 0x42)
     banner db 0x48, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x48, 0x62, 0x62, 0x07
            db 0x0C, 0x01, 0x10, 0x1B, 0x12, 0x16, 0x1D, 0x16, 0x0A, 0x0B, 0x11, 0x62, 0x34, 0x73, 0x6C, 0x72, 0x48, 0x7F, 0x7F, 0x7F
            db 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x48, 0
@@ -36,20 +35,13 @@ section .data
              db 0x79^0x42, 0x21^0x42, 0x0A^0x42, 0
     msg_fail_len equ $ - msg_fail
     
-    ; Flag obfusqué: flag{1_T4k1_Allah_}
-    flag_enc db 0x66^0x42, 0x6C^0x42, 0x61^0x42, 0x67^0x42, 0x7B^0x42
-             db 0x31^0x42, 0x5F^0x42, 0x54^0x42, 0x34^0x42, 0x6B^0x42
-             db 0x31^0x42, 0x5F^0x42, 0x41^0x42, 0x6C^0x42, 0x6C^0x42
-             db 0x61^0x42, 0x68^0x42, 0x5F^0x42, 0x7D^0x42
-             db 0x0A^0x42, 0
+    flag_enc db 0x24, 0x2E, 0x23, 0x25, 0x39, 0x16, 0x23, 0x33, 0x35, 0x23, 0x08, 0x08, 0
     flag_len equ $ - flag_enc
     
-    ;   Algo constants (noms obfusqués)
     xor_key_1 dd 0x13371337
     xor_key_2 dd 0xDEADBEEF
     xor_key_3 dd 0xCAFEBABE
     
-    ; Dummy data
     padding_1 dq 0xAAAAAAAABBBBBBBB
     padding_2 dq 0xCCCCCCCCDDDDDDDD
 
@@ -62,9 +54,6 @@ section .bss
 section .text
     global _start
 
-;   
-; MACROS D'OBFUSCATION
-;   
 %macro JUNK_OPS 0
     push rax
     push rbx
@@ -80,34 +69,22 @@ section .text
 %endmacro
 
 %macro OPAQUE_JMP 0
-    mov r15, rsp
-    and r15, 0xF
-    or r15, r15
-    jz short $+7
-    jmp short $+5
-    int3
-    xor rax, rax
+    nop
+    nop
+    nop
 %endmacro
 
 %macro FAKE_CALL 0
-    xor r11, r11
-    test r11, r11
-    jnz short $+7
-    jmp short $+5
-    int3
-    ret
+    nop
+    nop
 %endmacro
 
-;   
-; POINT D'ENTRÉE (obfusqué)
-;   
 _start:
     push rbp
     mov rbp, rsp
     
     JUNK_OPS
     
-    ; Opaque predicate
     xor r10, r10
     test r10, r10
     jnz .dead_code_1
@@ -136,7 +113,6 @@ _start:
     
     call compute_expected_serial
     
-    ; Flow obfuscation
     mov r12, 0xABCD
     cmp r12, 0xABCD
     jne .dead_code_2
@@ -149,7 +125,6 @@ _start:
 .do_check:
     call compare_serials
     
-    ; Obfuscated result check
     xor rax, 1
     test rax, rax
     jz .success
@@ -170,18 +145,15 @@ _start:
     jmp .exit_success
     
 .exit_fail:
-    mov rdi, 1              ; Exit code 1 (erreur)
+    mov rdi, 1
     mov rax, 60
     syscall
     
 .exit_success:
-    xor rdi, rdi            ; Exit code 0 (succès)
+    xor rdi, rdi
     mov rax, 60
     syscall
 
-;   
-; DÉCHIFFRER BANNER (obfusqué)
-;   
 decrypt_and_print_banner:
     push rbp
     mov rbp, rsp
@@ -221,9 +193,6 @@ decrypt_and_print_banner:
     pop rbp
     ret
 
-;   
-; GET USERNAME (obfusqué)
-;   
 get_username:
     push rbp
     mov rbp, rsp
@@ -276,9 +245,6 @@ get_username:
     pop rbp
     ret
 
-;   
-; GET SERIAL (obfusqué)
-;   
 get_serial:
     push rbp
     mov rbp, rsp
@@ -328,9 +294,6 @@ get_serial:
     pop rbp
     ret
 
-;   
-; COMPUTE SERIAL (très obfusqué)
-;   
 compute_expected_serial:
     push rbp
     mov rbp, rsp
@@ -342,7 +305,6 @@ compute_expected_serial:
     
     JUNK_OPS
     
-    ; Load constants (obfuscated)
     mov r12d, [rel xor_key_1]
     xor r12, 0
     add r12, 0
@@ -406,9 +368,6 @@ compute_expected_serial:
     pop rbp
     ret
 
-;   
-; HEX CONVERSION (obfusqué)
-;   
 hex_to_string:
     push rbp
     mov rbp, rsp
@@ -450,9 +409,6 @@ hex_to_string:
     pop rbp
     ret
 
-;   
-; COMPARE (obfusqué)
-;   
 compare_serials:
     push rbp
     mov rbp, rsp
@@ -514,9 +470,6 @@ compare_serials:
     pop rbp
     ret
 
-;   
-; PRINT FUNCTIONS (obfusqués)
-;   
 print_success:
     push rbp
     mov rbp, rsp
@@ -597,4 +550,4 @@ print_flag:
     syscall
     
     pop rbp
-    ret:
+    ret
