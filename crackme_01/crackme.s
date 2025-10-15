@@ -6,6 +6,7 @@
 ;   nasm -f elf64 crackme.s -o crackme.o
 ;   ld crackme.o -o trust_yourself
 ; 
+
 BITS 64
 
 section .data
@@ -21,6 +22,15 @@ section .data
     prompt_serial db 0x4B^0x42, 0x65^0x42, 0x79^0x42, 0x3A^0x42, 0x20^0x42, 0
     prompt_serial_len equ $ - prompt_serial
     
+    ; "Good Job!\n" pour le concours
+    msg_success_competition db 71,111,111,100,32,74,111,98,33,10,0
+    msg_success_competition_len equ $ - msg_success_competition
+    
+    ; "Bad Password!\n" pour le concours
+    msg_fail_competition db 66,97,100,32,80,97,115,115,119,111,114,100,33,10,0
+    msg_fail_competition_len equ $ - msg_fail_competition
+    
+    ; Messages originaux (chiffrés)
     msg_success db 0x0A^0x42, 0x5B^0x42, 0x4F^0x42, 0x4B^0x42, 0x5D^0x42
                 db 0x20^0x42, 0x44^0x42, 0x65^0x42, 0x63^0x42, 0x72^0x42
                 db 0x79^0x42, 0x70^0x42, 0x74^0x42, 0x65^0x42, 0x64^0x42
@@ -34,7 +44,8 @@ section .data
              db 0x79^0x42, 0x21^0x42, 0x0A^0x42, 0
     msg_fail_len equ $ - msg_fail
     
-    flag_enc db 0x24, 0x2E, 0x23, 0x25, 0x39, 0x1D, 0x16, 0x23, 0x6F, 0x33, 0x35, 0x23, 0x1D, 0x0A, 0x7F, 0x3F, 0x48, 0
+    ; Flag: "flag{_Ta-qwa_H=}" (16 chars) XOR 0x42
+    flag_enc db 0x24, 0x2E, 0x23, 0x25, 0x39, 0x1D, 0x16, 0x23, 0x6F, 0x33, 0x35, 0x23, 0x1D, 0x0A, 0x7F, 0x3F, 0
     flag_len equ $ - flag_enc
     
     xor_key_1 dd 0x13371337
@@ -49,6 +60,8 @@ section .bss
     input_buf_2 resb 64
     hash_result resb 64
     temp_storage resb 128
+    pipe_mode resb 1        ; 1 = mode pipe, 0 = mode interactif
+    username_hash resb 8    ; Pour stocker le hash du username
 
 section .text
     global _start
@@ -97,33 +110,50 @@ _start:
 .real_entry:
     JUNK_OPS
     
+    ; Détecter si stdin est un pipe
+    call detect_pipe_mode
+    
+    cmp byte [rel pipe_mode], 1
+    je .pipe_mode
+    
+    ; Mode interactif
     call decrypt_and_print_banner
-    
     OPAQUE_JMP
-    
     call get_username
-    
     FAKE_CALL
-    
     call get_serial
-    
     JUNK_OPS
     OPAQUE_JMP
-    
     call compute_expected_serial
+    jmp .do_check
     
+.pipe_mode:
+    ; Mode pipe (pour le concours)
+    call read_flag_from_stdin
+    
+.do_check:
     mov r12, 0xABCD
     cmp r12, 0xABCD
     jne .dead_code_2
-    jmp .do_check
+    jmp .check_flag
     
 .dead_code_2:
     int3
     ret
     
-.do_check:
-    call compare_serials
+.check_flag:
+    cmp byte [rel pipe_mode], 1
+    je .pipe_compare
     
+    ; Mode interactif: comparer les serials
+    call compare_serials
+    jmp .check_result
+    
+.pipe_compare:
+    ; Mode pipe: comparer directement le flag
+    call compare_flag_direct
+    
+.check_result:
     xor rax, 1
     test rax, rax
     jz .success
@@ -133,14 +163,26 @@ _start:
     
 .fail:
     JUNK_OPS
+    cmp byte [rel pipe_mode], 1
+    je .fail_pipe
     call print_fail
+    jmp .exit_fail
+    
+.fail_pipe:
+    call print_fail_competition
     jmp .exit_fail
     
 .success:
     OPAQUE_JMP
+    cmp byte [rel pipe_mode], 1
+    je .success_pipe
     call print_success
     JUNK_OPS
     call print_flag
+    jmp .exit_success
+    
+.success_pipe:
+    call print_success_competition
     jmp .exit_success
     
 .exit_fail:
@@ -153,9 +195,119 @@ _start:
     mov rax, 60
     syscall
 
+detect_pipe_mode:
+    push rbp
+    mov rbp, rsp
+    push rbx
+    
+    ; Tester si stdin est un terminal (isatty)
+    mov rax, 16          ; sys_ioctl
+    xor rdi, rdi         ; stdin
+    mov rsi, 0x5401      ; TCGETS
+    lea rdx, [rel temp_storage]
+    syscall
+    
+    ; Si erreur (rax < 0), c'est un pipe
+    test rax, rax
+    js .is_pipe
+    
+    ; C'est un terminal
+    mov byte [rel pipe_mode], 0
+    jmp .done
+    
+.is_pipe:
+    mov byte [rel pipe_mode], 1
+    
+.done:
+    pop rbx
+    pop rbp
+    ret
+
+read_flag_from_stdin:
+    push rbp
+    mov rbp, rsp
+    
+    JUNK_OPS
+    
+    xor rax, rax
+    xor rdi, rdi
+    lea rsi, [rel input_buf_2]
+    mov rdx, 64
+    syscall
+    
+    mov rbx, rax
+    
+    test rbx, rbx
+    jz .done
+    lea rdi, [rel input_buf_2]
+    add rdi, rbx
+    dec rdi
+    cmp byte [rdi], 0x0A
+    jne .done
+    mov byte [rdi], 0
+    
+.done:
+    pop rbp
+    ret
+
+compare_flag_direct:
+    push rbp
+    mov rbp, rsp
+    push rbx
+    push rcx
+    
+    JUNK_OPS
+    
+    lea rsi, [rel input_buf_2]
+    lea rdi, [rel flag_enc]
+    mov rcx, 16             ; Exactement 16 caractères à comparer
+    
+.loop:
+    movzx rax, byte [rsi]   ; Caractère de l'input
+    movzx rbx, byte [rdi]   ; Caractère du flag chiffré
+    
+    ; Chiffrer le caractère de l'input avec XOR 0x42
+    xor al, 0x42
+    
+    OPAQUE_JMP
+    
+    ; Comparer avec le flag chiffré stocké
+    cmp al, bl
+    jne .no_match
+    
+    inc rsi
+    inc rdi
+    dec rcx
+    
+    ; Continue jusqu'à avoir comparé les 16 caractères
+    test rcx, rcx
+    jnz .loop
+    
+    ; Vérifier qu'il n'y a pas de caractères supplémentaires dans l'input
+    cmp byte [rsi], 0
+    jne .no_match
+    
+.match:
+    mov rax, 1
+    xor rax, 0
+    jmp .done
+    
+.no_match:
+    xor rax, rax
+    add rax, 0
+    
+.done:
+    pop rcx
+    pop rbx
+    pop rbp
+    ret
+
 decrypt_and_print_banner:
     push rbp
     mov rbp, rsp
+    push rbx
+    push rcx
+    push rsi
     
     JUNK_OPS
     
@@ -189,6 +341,9 @@ decrypt_and_print_banner:
     mov rdx, banner_len
     syscall
     
+    pop rsi
+    pop rcx
+    pop rbx
     pop rbp
     ret
 
@@ -196,6 +351,7 @@ get_username:
     push rbp
     mov rbp, rsp
     push rbx
+    push rsi
     
     JUNK_OPS
     
@@ -240,6 +396,7 @@ get_username:
     mov byte [rdi], 0
     
 .done:
+    pop rsi
     pop rbx
     pop rbp
     ret
@@ -248,6 +405,7 @@ get_serial:
     push rbp
     mov rbp, rsp
     push rbx
+    push rsi
     
     JUNK_OPS
     
@@ -289,6 +447,7 @@ get_serial:
     mov byte [rdi], 0
     
 .done:
+    pop rsi
     pop rbx
     pop rbp
     ret
@@ -472,6 +631,8 @@ compare_serials:
 print_success:
     push rbp
     mov rbp, rsp
+    push rbx
+    push rsi
     
     JUNK_OPS
     
@@ -493,12 +654,16 @@ print_success:
     mov rdx, msg_success_len
     syscall
     
+    pop rsi
+    pop rbx
     pop rbp
     ret
 
 print_fail:
     push rbp
     mov rbp, rsp
+    push rbx
+    push rsi
     
     JUNK_OPS
     
@@ -520,12 +685,42 @@ print_fail:
     mov rdx, msg_fail_len
     syscall
     
+    pop rsi
+    pop rbx
+    pop rbp
+    ret
+
+print_success_competition:
+    push rbp
+    mov rbp, rsp
+    
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel msg_success_competition]
+    mov rdx, msg_success_competition_len
+    syscall
+    
+    pop rbp
+    ret
+
+print_fail_competition:
+    push rbp
+    mov rbp, rsp
+    
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel msg_fail_competition]
+    mov rdx, msg_fail_competition_len
+    syscall
+    
     pop rbp
     ret
 
 print_flag:
     push rbp
     mov rbp, rsp
+    push rbx
+    push rsi
     
     JUNK_OPS
     OPAQUE_JMP
@@ -545,8 +740,19 @@ print_flag:
     mov rax, 1
     mov rdi, 1
     lea rsi, [rel flag_enc]
-    mov rdx, flag_len
+    mov rdx, 16  ; Exactement 16 caractères (pas le \0)
     syscall
     
+    ; Ajouter un newline
+    push 10
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, rsp
+    mov rdx, 1
+    syscall
+    add rsp, 8
+    
+    pop rsi
+    pop rbx
     pop rbp
     ret
