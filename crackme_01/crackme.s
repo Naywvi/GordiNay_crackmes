@@ -4,46 +4,39 @@
 ; Objectif : Trouver le bon serial pour le username
 ; Compilation :
 ;   nasm -f elf64 crackme.s -o crackme.o
-;   ld crackme.o -o crackme
+;   ld crackme.o -o trust_yourself
 ;  
 
 BITS 64
 
 section .data
-    ; Nouvelle bannière stylée (XOR 0x42)
-    banner db 0x0A, 0x7B^0x42, 0x21^0x42, 0x7D^0x42, 0x20^0x42
-           db 0x44^0x42, 0x4F^0x42, 0x20^0x42, 0x59^0x42, 0x4F^0x42
-           db 0x55^0x42, 0x20^0x42, 0x54^0x42, 0x52^0x42, 0x55^0x42
-           db 0x53^0x42, 0x54^0x42, 0x20^0x42, 0x59^0x42, 0x4F^0x42
-           db 0x55^0x42, 0x52^0x42, 0x20^0x42, 0x53^0x42, 0x59^0x42
-           db 0x53^0x42, 0x54^0x42, 0x45^0x42, 0x4D^0x42, 0x3F^0x42
-           db 0x20^0x42, 0x7B^0x42, 0x21^0x42, 0x7D^0x42
-           db 0x0A^0x42, 0
+    ; Bannière: ENCRYPT_THIS v1.0 (XOR 0x42)
+    banner db 0x48, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x48, 0x62, 0x62, 0x07
+           db 0x0C, 0x01, 0x10, 0x1B, 0x12, 0x16, 0x1D, 0x16, 0x0A, 0x0B, 0x11, 0x62, 0x34, 0x73, 0x6C, 0x72, 0x48, 0x7F, 0x7F, 0x7F
+           db 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x48, 0
     banner_len equ $ - banner
     
-    prompt_user db 0x55^0x42, 0x73^0x42, 0x65^0x42, 0x72^0x42, 0x6E^0x42
-                db 0x61^0x42, 0x6D^0x42, 0x65^0x42, 0x3A^0x42, 0x20^0x42, 0
+    prompt_user db 0x55^0x42, 0x73^0x42, 0x65^0x42, 0x72^0x42, 0x49^0x42
+                db 0x44^0x42, 0x3A^0x42, 0x20^0x42, 0
     prompt_user_len equ $ - prompt_user
     
-    prompt_serial db 0x53^0x42, 0x65^0x42, 0x72^0x42, 0x69^0x42, 0x61^0x42
-                  db 0x6C^0x42, 0x3A^0x42, 0x20^0x42, 0
+    prompt_serial db 0x4B^0x42, 0x65^0x42, 0x79^0x42, 0x3A^0x42, 0x20^0x42, 0
     prompt_serial_len equ $ - prompt_serial
     
-    msg_success db 0x0A^0x42, 0x5B^0x42, 0x2B^0x42, 0x5D^0x42, 0x20^0x42
-                db 0x41^0x42, 0x63^0x42, 0x63^0x42, 0x65^0x42, 0x73^0x42
-                db 0x73^0x42, 0x20^0x42, 0x47^0x42, 0x72^0x42, 0x61^0x42
-                db 0x6E^0x42, 0x74^0x42, 0x65^0x42, 0x64^0x42, 0x21^0x42
-                db 0x20^0x42, 0x46^0x42, 0x6C^0x42, 0x61^0x42, 0x67^0x42
-                db 0x3A^0x42, 0x20^0x42, 0
+    msg_success db 0x0A^0x42, 0x5B^0x42, 0x4F^0x42, 0x4B^0x42, 0x5D^0x42
+                db 0x20^0x42, 0x44^0x42, 0x65^0x42, 0x63^0x42, 0x72^0x42
+                db 0x79^0x42, 0x70^0x42, 0x74^0x42, 0x65^0x42, 0x64^0x42
+                db 0x21^0x42, 0x20^0x42, 0x46^0x42, 0x6C^0x42, 0x61^0x42
+                db 0x67^0x42, 0x3A^0x42, 0x20^0x42, 0
     msg_success_len equ $ - msg_success
     
-    msg_fail db 0x0A^0x42, 0x5B^0x42, 0x2D^0x42, 0x5D^0x42, 0x20^0x42
-             db 0x41^0x42, 0x63^0x42, 0x63^0x42, 0x65^0x42, 0x73^0x42
-             db 0x73^0x42, 0x20^0x42, 0x44^0x42, 0x65^0x42, 0x6E^0x42
-             db 0x69^0x42, 0x65^0x42, 0x64^0x42, 0x21^0x42, 0x0A^0x42, 0
+    msg_fail db 0x0A^0x42, 0x5B^0x42, 0x58^0x42, 0x5D^0x42, 0x20^0x42
+             db 0x49^0x42, 0x6E^0x42, 0x76^0x42, 0x61^0x42, 0x6C^0x42
+             db 0x69^0x42, 0x64^0x42, 0x20^0x42, 0x6B^0x42, 0x65^0x42
+             db 0x79^0x42, 0x21^0x42, 0x0A^0x42, 0
     msg_fail_len equ $ - msg_fail
     
-    ; Flag: flag{1_T4k1_Allah_}
+    ; Flag obfusqué: flag{1_T4k1_Allah_}
     flag_enc db 0x66^0x42, 0x6C^0x42, 0x61^0x42, 0x67^0x42, 0x7B^0x42
              db 0x31^0x42, 0x5F^0x42, 0x54^0x42, 0x34^0x42, 0x6B^0x42
              db 0x31^0x42, 0x5F^0x42, 0x41^0x42, 0x6C^0x42, 0x6C^0x42
@@ -51,71 +44,172 @@ section .data
              db 0x0A^0x42, 0
     flag_len equ $ - flag_enc
     
-    ;  algo constants
-     algo1 dd 0x13371337
-     algo2 dd 0xDEADBEEF
-     algo3 dd 0xCAFEBABE
+    ;   Algo constants (noms obfusqués)
+    xor_key_1 dd 0x13371337
+    xor_key_2 dd 0xDEADBEEF
+    xor_key_3 dd 0xCAFEBABE
+    
+    ; Dummy data
+    padding_1 dq 0xAAAAAAAABBBBBBBB
+    padding_2 dq 0xCCCCCCCCDDDDDDDD
 
 section .bss
-    username resb 64
-    serial resb 64
-    computed_serial resb 64
+    input_buf_1 resb 64
+    input_buf_2 resb 64
+    hash_result resb 64
+    temp_storage resb 128
 
 section .text
     global _start
 
+;   
+; MACROS D'OBFUSCATION
+;   
+%macro JUNK_OPS 0
+    push rax
+    push rbx
+    mov rax, 0xDEADBEEFCAFEBABE
+    mov rbx, 0x1337133713371337
+    xor rax, rbx
+    rol rax, 13
+    ror rax, 13
+    add rax, 0
+    sub rax, 0
+    pop rbx
+    pop rax
+%endmacro
+
+%macro OPAQUE_JMP 0
+    mov r15, rsp
+    and r15, 0xF
+    or r15, r15
+    jz short $+7
+    jmp short $+5
+    int3
+    xor rax, rax
+%endmacro
+
+%macro FAKE_CALL 0
+    xor r11, r11
+    test r11, r11
+    jnz short $+7
+    jmp short $+5
+    int3
+    ret
+%endmacro
+
+;   
+; POINT D'ENTRÉE (obfusqué)
+;   
 _start:
     push rbp
     mov rbp, rsp
     
-    ; Afficher banner
+    JUNK_OPS
+    
+    ; Opaque predicate
+    xor r10, r10
+    test r10, r10
+    jnz .dead_code_1
+    jmp .real_entry
+    
+.dead_code_1:
+    int3
+    xor rax, rax
+    div rax
+    
+.real_entry:
+    JUNK_OPS
+    
     call decrypt_and_print_banner
     
-    ; Demander username
+    OPAQUE_JMP
+    
     call get_username
     
-    ; Demander serial
+    FAKE_CALL
+    
     call get_serial
     
-    ; Calculer le serial attendu
+    JUNK_OPS
+    OPAQUE_JMP
+    
     call compute_expected_serial
     
-    ; Comparer
+    ; Flow obfuscation
+    mov r12, 0xABCD
+    cmp r12, 0xABCD
+    jne .dead_code_2
+    jmp .do_check
+    
+.dead_code_2:
+    int3
+    ret
+    
+.do_check:
     call compare_serials
-    cmp rax, 1
-    je .success
+    
+    ; Obfuscated result check
+    xor rax, 1
+    test rax, rax
+    jz .success
+    xor rax, 1
+    test rax, rax
+    jnz .fail
     
 .fail:
+    JUNK_OPS
     call print_fail
-    jmp .exit
+    jmp .exit_fail
     
 .success:
+    OPAQUE_JMP
     call print_success
+    JUNK_OPS
     call print_flag
+    jmp .exit_success
     
-.exit:
+.exit_fail:
+    mov rdi, 1              ; Exit code 1 (erreur)
     mov rax, 60
-    xor rdi, rdi
+    syscall
+    
+.exit_success:
+    xor rdi, rdi            ; Exit code 0 (succès)
+    mov rax, 60
     syscall
 
-;  
-; DÉCHIFFRER ET AFFICHER BANNER
-;  
+;   
+; DÉCHIFFRER BANNER (obfusqué)
+;   
 decrypt_and_print_banner:
     push rbp
     mov rbp, rsp
     
+    JUNK_OPS
+    
     lea rsi, [rel banner]
     mov bl, 0x42
+    xor rcx, rcx
     
 .decrypt_loop:
-    mov al, [rsi]
+    mov al, [rsi + rcx]
     test al, al
     jz .done
+    
     xor al, bl
-    mov [rsi], al
-    inc rsi
+    xor al, 0
+    add al, 0
+    
+    mov [rsi + rcx], al
+    inc rcx
+    
+    cmp rcx, -1
+    je .dead_branch
     jmp .decrypt_loop
+    
+.dead_branch:
+    int3
     
 .done:
     mov rax, 1
@@ -127,15 +221,16 @@ decrypt_and_print_banner:
     pop rbp
     ret
 
-;  
-; OBTENIR USERNAME
-;  
+;   
+; GET USERNAME (obfusqué)
+;   
 get_username:
     push rbp
     mov rbp, rsp
     push rbx
     
-    ; Déchiffrer prompt
+    JUNK_OPS
+    
     lea rsi, [rel prompt_user]
     mov bl, 0x42
 .decrypt:
@@ -145,30 +240,31 @@ get_username:
     xor al, bl
     mov [rsi], al
     inc rsi
+    
+    OPAQUE_JMP
+    
     jmp .decrypt
     
 .prompt:
-    ; Afficher prompt
     mov rax, 1
     mov rdi, 1
     lea rsi, [rel prompt_user]
     mov rdx, prompt_user_len
     syscall
     
-    ; Lire input
-    mov rax, 0
-    mov rdi, 0
-    lea rsi, [rel username]
+    xor rax, rax
+    xor rdi, rdi
+    lea rsi, [rel input_buf_1]
     mov rdx, 64
     syscall
     
-    ; Sauvegarder la longueur
     mov rbx, rax
     
-    ; Retirer newline si présent
+    JUNK_OPS
+    
     test rbx, rbx
     jz .done
-    lea rdi, [rel username]
+    lea rdi, [rel input_buf_1]
     add rdi, rbx
     dec rdi
     cmp byte [rdi], 0x0A
@@ -180,15 +276,16 @@ get_username:
     pop rbp
     ret
 
-;  
-; OBTENIR SERIAL
-;  
+;   
+; GET SERIAL (obfusqué)
+;   
 get_serial:
     push rbp
     mov rbp, rsp
     push rbx
     
-    ; Déchiffrer prompt
+    JUNK_OPS
+    
     lea rsi, [rel prompt_serial]
     mov bl, 0x42
 .decrypt:
@@ -201,27 +298,25 @@ get_serial:
     jmp .decrypt
     
 .prompt:
-    ; Afficher prompt
     mov rax, 1
     mov rdi, 1
     lea rsi, [rel prompt_serial]
     mov rdx, prompt_serial_len
     syscall
     
-    ; Lire input
-    mov rax, 0
-    mov rdi, 0
-    lea rsi, [rel serial]
+    xor rax, rax
+    xor rdi, rdi
+    lea rsi, [rel input_buf_2]
     mov rdx, 64
     syscall
     
-    ; Sauvegarder la longueur
     mov rbx, rax
     
-    ; Retirer newline si présent
+    OPAQUE_JMP
+    
     test rbx, rbx
     jz .done
-    lea rdi, [rel serial]
+    lea rdi, [rel input_buf_2]
     add rdi, rbx
     dec rdi
     cmp byte [rdi], 0x0A
@@ -233,9 +328,9 @@ get_serial:
     pop rbp
     ret
 
-;  
-; ALGORITHME DE GÉNÉRATION DU SERIAL
-;  
+;   
+; COMPUTE SERIAL (très obfusqué)
+;   
 compute_expected_serial:
     push rbp
     mov rbp, rsp
@@ -243,46 +338,67 @@ compute_expected_serial:
     push r12
     push r13
     push r14
+    push r15
     
-    ; Calculer hash du username
+    JUNK_OPS
+    
+    ; Load constants (obfuscated)
+    mov r12d, [rel xor_key_1]
+    xor r12, 0
+    add r12, 0
+    
+    mov r13d, [rel xor_key_2]
+    rol r13, 0
+    
+    mov r14d, [rel xor_key_3]
+    ror r14, 0
+    
     xor rax, rax
     xor rbx, rbx
-    lea rsi, [rel username]
+    lea rsi, [rel input_buf_1]
     
-    ; Charger les  algo constants
-    mov r12d, [rel  algo1]
-    mov r13d, [rel  algo2]
-    mov r14d, [rel  algo3]
+    OPAQUE_JMP
     
 .hash_loop:
     movzx rcx, byte [rsi + rbx]
     test rcx, rcx
     jz .hash_done
     
-    ; (acc * 33) ^ char ^  algo
     imul rax, 33
+    xor rax, 0
     xor rax, rcx
+    
+    JUNK_OPS
+    
     rol rax, 7
     xor rax, r12
     
     inc rbx
+    
+    cmp rbx, -1
+    je .dead
     jmp .hash_loop
     
+.dead:
+    int3
+    
 .hash_done:
-    ; Mixer
+    JUNK_OPS
+    
     xor rax, r13
     mov rcx, rax
     rol rcx, 13
     xor rax, rcx
     xor rax, r14
     
-    ; 32 bits
     and eax, 0xFFFFFFFF
     
-    ; Convertir en hex
-    lea rdi, [rel computed_serial]
+    OPAQUE_JMP
+    
+    lea rdi, [rel hash_result]
     call hex_to_string
     
+    pop r15
     pop r14
     pop r13
     pop r12
@@ -290,9 +406,9 @@ compute_expected_serial:
     pop rbp
     ret
 
-;  
-; CONVERTIR EN HEX STRING
-;  
+;   
+; HEX CONVERSION (obfusqué)
+;   
 hex_to_string:
     push rbp
     mov rbp, rsp
@@ -309,11 +425,13 @@ hex_to_string:
     and rax, 0x0F
     
     cmp al, 9
-    jle .is_digit
-    add al, 'A' - 10
-    jmp .store
-.is_digit:
+    jg .letter
     add al, '0'
+    jmp .store
+    
+.letter:
+    sub al, 10
+    add al, 'A'
     
 .store:
     mov [rdi], al
@@ -332,36 +450,39 @@ hex_to_string:
     pop rbp
     ret
 
-;  
-; COMPARER SERIALS
-;  
+;   
+; COMPARE (obfusqué)
+;   
 compare_serials:
     push rbp
     mov rbp, rsp
     push rbx
     
-    lea rsi, [rel serial]
-    lea rdi, [rel computed_serial]
+    JUNK_OPS
     
-.compare_loop:
+    lea rsi, [rel input_buf_2]
+    lea rdi, [rel hash_result]
+    
+.loop:
     movzx rax, byte [rsi]
     movzx rbx, byte [rdi]
     
-    ; Convertir en uppercase
     cmp al, 'a'
-    jb .check1
+    jb .c1
     cmp al, 'z'
-    ja .check1
+    ja .c1
     sub al, 32
     
-.check1:
+.c1:
     cmp bl, 'a'
-    jb .check2
+    jb .c2
     cmp bl, 'z'
-    ja .check2
+    ja .c2
     sub bl, 32
     
-.check2:
+.c2:
+    OPAQUE_JMP
+    
     cmp al, bl
     jne .no_match
     
@@ -370,26 +491,37 @@ compare_serials:
     
     inc rsi
     inc rdi
-    jmp .compare_loop
+    
+    cmp rax, -1
+    je .dead_cmp
+    
+    jmp .loop
+    
+.dead_cmp:
+    int3
     
 .match:
     mov rax, 1
+    xor rax, 0
     jmp .done
     
 .no_match:
     xor rax, rax
+    add rax, 0
     
 .done:
     pop rbx
     pop rbp
     ret
 
-;  
-; AFFICHER MESSAGES
-;  
+;   
+; PRINT FUNCTIONS (obfusqués)
+;   
 print_success:
     push rbp
     mov rbp, rsp
+    
+    JUNK_OPS
     
     lea rsi, [rel msg_success]
     mov bl, 0x42
@@ -416,6 +548,8 @@ print_fail:
     push rbp
     mov rbp, rsp
     
+    JUNK_OPS
+    
     lea rsi, [rel msg_fail]
     mov bl, 0x42
 .decrypt:
@@ -441,6 +575,9 @@ print_flag:
     push rbp
     mov rbp, rsp
     
+    JUNK_OPS
+    OPAQUE_JMP
+    
     lea rsi, [rel flag_enc]
     mov bl, 0x42
 .decrypt:
@@ -460,4 +597,4 @@ print_flag:
     syscall
     
     pop rbp
-    ret
+    ret:
